@@ -1,15 +1,13 @@
 # BetterTree
 
-BetterTree is a command-line tool for displaying directory structures and file contents. It skips large files and specified directories to keep the output manageable.
-
-## Features
-
-- Lists directories and files recursively.
-- Shows file contents up to a set size and number of lines.
-- Excludes certain directories and files.
-- Can be run from any location.
+Heyho party people! This is a simple tool to help you share your project structure with a certain AI chatbot. I found that during chats,
+it forgot the project structure midway through, and I had to describe it all over again. Similar to the `tree` command, this tool lists
+directories and files recursively, but also displays the content of files up to a certain size and line limit.
 
 ## Installation
+
+An installation script is provided to automate the process. The script will install the `bettertree` command to your `~/.local/bin` directory
+and add it to your `~/.bashrc` file.
 
 ### Requirements
 
@@ -17,17 +15,20 @@ BetterTree is a command-line tool for displaying directory structures and file c
 
 ### Steps
 
-1. **Download the Scripts:**
-   - Ensure you have both `bettertree.py` and `install_bettertree.sh` in the same directory.
+1. **Clone the Repository:**
+    ```bash
+    git clone https://github.com/Geibinger/BetterTree.git
+    cd BetterTree
+    ```
 
 2. **Make the Install Script Executable:**
    ```bash
-   chmod +x install_bettertree.sh
+   chmod +x install.sh
    ```
 
 3. **Run the Install Script:**
    ```bash
-   ./install_bettertree.sh
+   ./install.sh
    ```
 
 4. **Reload Your Shell Configuration:**
@@ -58,11 +59,27 @@ bettertree [directory] [options]
   *Default:* 1000 lines  
   *Example:* `-l 500`
 
-- `-d`, `--depth`: Maximum directory depth to traverse.  
-  *Default:* No limit  
-  *Example:* `-d 2`
+- `-e`, `--extensions`: Specify one or more file extensions to display (e.g., `-e .py .txt`).  
+  *Default:* All text files  
+  *Example:* `-e .py .md`
 
-### Examples
+### Configuration
+
+You can exclude specific directories and files by setting environment variables:
+
+- `EXCLUDED_DIRECTORIES`: Comma-separated list of directories to exclude.  
+  *Default:* `node_modules,.git,__pycache__,venv,dist,build,.idea,.vscode`
+
+- `EXCLUDED_FILES`: Comma-separated list of files to exclude.  
+  *Default:* `package-lock.json,yarn.lock,.DS_Store,.env`
+
+*Example:*  
+```bash
+export EXCLUDED_DIRECTORIES="node_modules,.git,venv,build,logs"
+export EXCLUDED_FILES="package-lock.json,.env,.log"
+```
+
+## Examples
 
 - **Show the current directory with default limits:**
   ```bash
@@ -77,4 +94,16 @@ bettertree [directory] [options]
 - **Limit the directory traversal to 2 levels deep:**
   ```bash
   bettertree -d 2
+  ```
+
+- **Only display Python files:**
+  ```bash
+  bettertree -e .py
+  ```
+
+- **Only display Python and Markdown files with custom exclusions:**
+  ```bash
+  export EXCLUDED_DIRECTORIES="node_modules,.git,venv,build,logs"
+  export EXCLUDED_FILES="package-lock.json,.env,.log"
+  bettertree -e .py .md
   ```

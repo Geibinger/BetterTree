@@ -4,13 +4,19 @@ import os
 import sys
 import argparse
 
-# Optional: Uncomment the following lines to enable color output
 from colorama import init, Fore, Style
 init(autoreset=True)
 
-# Define excluded directories and files
-EXCLUDED_DIRECTORIES = {'node_modules', '.git', '__pycache__', 'venv'}
-EXCLUDED_FILES = {'package-lock.json', 'yarn.lock'}
+# Load excluded directories/files from environment variables or use default values
+DEFAULT_EXCLUDED_DIRECTORIES = "node_modules,.git,__pycache__,venv,dist,build,.idea,.vscode"
+DEFAULT_EXCLUDED_FILES = "package-lock.json,yarn.lock,.DS_Store,.env"
+
+EXCLUDED_DIRECTORIES = set(
+    os.getenv("EXCLUDED_DIRECTORIES", DEFAULT_EXCLUDED_DIRECTORIES).split(",")
+)
+EXCLUDED_FILES = set(
+    os.getenv("EXCLUDED_FILES", DEFAULT_EXCLUDED_FILES).split(",")
+)
 
 def is_text_file(file_path):
     """
@@ -31,7 +37,7 @@ def is_text_file(file_path):
     except Exception:
         return False
 
-def print_structure(start_path, indent="", max_size=10*1024, max_lines=1000):
+def print_structure(start_path, indent="", max_size=10*1024, max_lines=1000, allowed_extensions=None):
     """
     Recursively prints the directory structure and file contents.
 
@@ -40,6 +46,7 @@ def print_structure(start_path, indent="", max_size=10*1024, max_lines=1000):
     - indent: Current indentation level.
     - max_size: Maximum file size in bytes to display content.
     - max_lines: Maximum number of lines to display from a file.
+    - allowed_extensions: A set of file extensions to display. If None or empty, display all text files.
     """
     try:
         entries = sorted(os.listdir(start_path))
@@ -49,29 +56,52 @@ def print_structure(start_path, indent="", max_size=10*1024, max_lines=1000):
 
     for index, entry in enumerate(entries):
         path = os.path.join(start_path, entry)
-        is_last = index == len(entries) - 1
+        is_last = (index == len(entries) - 1)
         connector = "└── " if is_last else "├── "
-        # Optional: Add color to directories and files
+
+        # Optional color for directories vs. files
         if os.path.isdir(path):
             connector = f"{Fore.GREEN}{connector}{Style.RESET_ALL}"
         else:
             connector = f"{Fore.BLUE}{connector}{Style.RESET_ALL}"
+
         print(f"{indent}{connector}{entry}")
 
+        # Skip if directory is in the excluded set
         if os.path.isdir(path):
             if entry in EXCLUDED_DIRECTORIES:
                 print(f"{indent}{'    ' if is_last else '│   '}[Skipped {entry} directory]")
                 continue
             extension = "    " if is_last else "│   "
-            print_structure(path, indent + extension, max_size, max_lines)
+            print_structure(
+                path,
+                indent + extension,
+                max_size,
+                max_lines,
+                allowed_extensions=allowed_extensions
+            )
         elif os.path.isfile(path):
+            # Skip if file is in the excluded set
             if entry in EXCLUDED_FILES:
                 print(f"{indent + ('    ' if is_last else '│   ')}[Skipped {entry} file]")
                 continue
+
+            # If specific extensions are provided, check if this file matches
+            if allowed_extensions:
+                _, ext = os.path.splitext(entry.lower())
+                if ext not in allowed_extensions:
+                    print(f"{indent + ('    ' if is_last else '│   ')}[Skipped {entry} - extension not in allowed list]")
+                    continue
+
+            # Check if it's a text file
             if is_text_file(path):
                 file_size = os.path.getsize(path)
                 if file_size <= max_size:
-                    print_file_content(path, indent + ("    " if is_last else "│   "), max_lines)
+                    print_file_content(
+                        path,
+                        indent + ("    " if is_last else "│   "),
+                        max_lines
+                    )
                 else:
                     print(f"{indent + ('    ' if is_last else '│   ')}[Skipped {entry} - size {file_size} bytes exceeds limit]")
             else:
@@ -120,6 +150,12 @@ def parse_arguments():
         default=1000,
         help="Maximum number of lines to display from each file (default: 1000)"
     )
+    parser.add_argument(
+        "-e", "--extensions",
+        nargs="*",
+        default=[],
+        help="Specify one or more file extensions (e.g. -e .py .txt) to display. If omitted, all text files are displayed."
+    )
     return parser.parse_args()
 
 def main():
@@ -128,10 +164,17 @@ def main():
     max_size = args.size * 1024  # Convert KB to bytes
     max_lines = args.lines
 
-    # Optional: Add color to the header
+    # Normalize and store allowed extensions in a set (in lowercase)
+    if args.extensions:
+        allowed_extensions = {
+            ext.lower() if ext.startswith('.') else f".{ext.lower()}"
+            for ext in args.extensions
+        }
+    else:
+        allowed_extensions = None  # Means "no restriction by extension"
+
     print(f"{Fore.MAGENTA}Directory structure and contents of: {start_directory}{Style.RESET_ALL}\n")
-    # print(f"Directory structure and contents of: {start_directory}\n")
-    print_structure(start_directory, max_size=max_size, max_lines=max_lines)
+    print_structure(start_directory, max_size=max_size, max_lines=max_lines, allowed_extensions=allowed_extensions)
 
 if __name__ == "__main__":
     main()
